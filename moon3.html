@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>月球探索思维导图</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', 'Marker Felt', '微软雅黑', sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #ff6b6b;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        }
+        .questions-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            width: 100%;
+            margin: 20px 0;
+        }
+        .question-card {
+            background-color: #ffecb8;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px dashed #ffb347;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        .question-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background-color: #ffe4a6;
+        }
+        .question-card.answered {
+            background-color: #d4edda;
+            border: 2px solid #28a745;
+        }
+        .answer-container {
+            width: 90%;
+            margin: 20px 0;
+        }
+        .answer-box {
+            background-color: #e2f3ff;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4dabf7;
+            min-height: 80px;
+            margin-bottom: 15px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #answer-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #a2d5f2;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 25px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        #mindmap {
+            width: 100%;
+            height: 600px;
+            margin: 20px 0;
+            border: 3px solid #a2d5f2;
+            border-radius: 10px;
+            background-color: #f9fdff;
+        }
+        .save-btn {
+            background-color: #6c63ff;
+        }
+        .save-btn:hover {
+            background-color: #564dff;
+        }
+        .text-submit-btn {
+            background-color: #4dabf7;
+            padding: 10px 20px;
+        }
+        .text-submit-btn:hover {
+            background-color: #339af0;
+        }
+        .moon-icon {
+            font-size: 30px;
+            margin: 0 10px;
+        }
+        .character {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            z-index: 100;
+        }
+        .current-question {
+            font-weight: bold;
+            color: #e67700;
+            margin: 15px 0;
+            font-size: 18px;
+        }
+        .checkmark {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: #28a745;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span class="moon-icon">🌝</span>月球探索思维导图<span class="moon-icon">🌚</span></h1>
+        
+        <div class="current-question" id="current-question">请点击你想回答的问题</div>
+        
+        <div class="answer-container">
+            <div class="answer-box">
+                <p id="answer-text">你的回答会显示在这里...</p>
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="answer-input" placeholder="在这里输入你的答案...">
+                <button id="text-submit-btn" class="text-submit-btn">提交答案</button>
+            </div>
+        </div>
+        
+        <div class="questions-grid" id="questions-grid">
+            <!-- 问题卡片将通过JavaScript动态生成 -->
+        </div>
+        
+        <div>
+            <button id="generate-btn">✨ 生成思维导图</button>
+            <button id="save-btn" class="save-btn">💾 保存图片</button>
+        </div>
+        
+        <div id="mindmap"></div>
+    </div>
+    
+    <img src="https://img.icons8.com/color/96/000000/astronaut.png" class="character" alt="小宇航员">
+    
+    <script>
+        // 问题列表
+        const questions = [
+            "月球的直径是多少？",
+            "月球上有空气吗？",
+            "月球上的温差大吗？",
+            "月球上有液态水吗？",
+            "月球自己会发光吗？",
+            "月球上亮的部分和暗的部分是什么？",
+            "月球表面凹凸不平的是什么？"
+        ];
+
+        // 问题对应的关键词（用于生成思维导图节点）
+        const questionKeywords = [
+            "月球直径",
+            "月球空气",
+            "月球温差",
+            "月球液态水",
+            "月球发光",
+            "月球明暗区域",
+            "月球表面特征"
+        ];
+        
+        // 学生回答存储
+        let answers = {};
+        let currentQuestionIndex = null;
+        let mindmapChart;
+        
+        // 初始化问题卡片
+        function initQuestionCards() {
+            const grid = document.getElementById('questions-grid');
+            
+            questions.forEach((question, index) => {
+                const card = document.createElement('div');
+                card.className = 'question-card';
+                card.innerHTML = `
+                    ${question}
+                    <div class="checkmark" style="display: none;">✓</div>
+                `;
+                card.dataset.index = index;
+                
+                card.addEventListener('click', () => {
+                    selectQuestion(index);
+                });
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        // 选择问题
+        function selectQuestion(index) {
+            currentQuestionIndex = index;
+            document.getElementById('current-question').textContent = questions[index];
+            
+            // 高亮选中的问题卡片
+            document.querySelectorAll('.question-card').forEach(card => {
+                card.style.border = card.dataset.index == index ? '2px solid #4dabf7' : 
+                                    answers[card.dataset.index] ? '2px solid #28a745' : '2px dashed #ffb347';
+            });
+            
+            // 显示已保存的答案（如果有）
+            document.getElementById('answer-text').textContent = 
+                answers[index] ? answers[index] : '等待你的回答...';
+                
+            // 重置输入框并聚焦
+            document.getElementById('answer-input').value = '';
+            document.getElementById('answer-input').focus();
+        }
+        
+        // 初始化思维导图
+        function initMindmap() {
+            mindmapChart = echarts.init(document.getElementById('mindmap'));
+        }
+        
+        // 更新思维导图
+        function updateMindmap() {
+            const answeredQuestions = Object.keys(answers);
+            if (answeredQuestions.length === 0) {
+                document.getElementById('mindmap').innerHTML = '<p style="text-align:center;padding:50px;">请先回答一些问题再生成思维导图</p>';
+                return;
+            }
+
+            const nodes = [];
+            const links = [];
+            
+            // 中心节点
+            nodes.push({
+                name: '月球知识',
+                symbolSize: 70,
+                itemStyle: {
+                    color: '#f8b195'
+                },
+                label: {
+                    fontSize: 18,
+                    fontWeight: 'bold'
+                }
+            });
+            
+            // 为每个已回答的问题创建节点
+            answeredQuestions.forEach((index, i) => {
+                const angle = (i / answeredQuestions.length) * Math.PI * 2;
+                const radius = 150;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                // 整合问题和答案为简短描述
+                const shortDescription = getShortDescription(parseInt(index), answers[index]);
+                
+                nodes.push({
+                    name: shortDescription,
+                    x: x,
+                    y: y,
+                    symbolSize: 50,
+                    itemStyle: {
+                        color: '#f67280'
+                    },
+                    label: {
+                        fontSize: 14
+                    }
+                });
+                
+                // 连接到中心节点
+                links.push({
+                    source: '月球知识',
+                    target: shortDescription,
+                    lineStyle: {
+                        color: '#a2d5f2',
+                        width: 2
+                    }
+                });
+            });
+            
+            const option = {
+                title: {
+                    text: '月球知识思维导图',
+                    subtext: '三年级探索小队制作',
+                    left: 'center',
+                    textStyle: {
+                        color: '#ff6b6b',
+                        fontSize: 20,
+                        fontWeight: 'bold'
+                    },
+                    subtextStyle: {
+                        color: '#666',
+                        fontSize: 14
+                    }
+                },
+                tooltip: {
+                    trigger: 'item'
+                },
+                animationDuration: 1500,
+                animationEasingUpdate: 'quinticInOut',
+                series: [{
+                    type: 'graph',
+                    layout: 'none',
+                    data: nodes,
+                    links: links,
+                    roam: true,
+                    focusNodeAdjacency: true,
+                    label: {
+                        position: 'right',
+                        show: true,
+                        formatter: '{b}'
+                    },
+                    lineStyle: {
+                        color: 'source',
+                        curveness: 0.3
+                    },
+                    emphasis: {
+                        lineStyle: {
+                            width: 5
+                        }
+                    }
+                }]
+            };
+            
+            mindmapChart.setOption(option);
+        }
+        
+        // 整合问题和答案为简短描述
+        function getShortDescription(index, answer) {
+            const keyword = questionKeywords[index];
+            
+            // 根据不同类型的问题生成不同的简短描述
+            switch(index) {
+                case 0: // 月球直径
+                    return `直径: ${answer}`;
+                case 1: // 月球空气
+                    return answer.includes('没有') ? '没有空气' : '有空气';
+                case 2: // 月球温差
+                    return `温差: ${answer}`;
+                case 3: // 月球液态水
+                    return answer.includes('没有') ? '没有液态水' : '有液态水';
+                case 4: // 月球发光
+                    return answer.includes('不会') ? '不会发光' : '会发光';
+                case 5: // 月球明暗区域
+                    return `明暗: ${answer}`;
+                case 6: // 月球表面特征
+                    return `表面: ${answer}`;
+                default:
+                    return `${keyword}: ${answer}`;
+            }
+        }
+        
+        // 保存答案
+        function saveAnswer(answer) {
+            if (currentQuestionIndex === null) return;
+            
+            document.getElementById('answer-text').textContent = answer;
+            answers[currentQuestionIndex] = answer;
+            
+            // 更新问题卡片状态
+            const answeredCard = document.querySelector(`.question-card[data-index="${currentQuestionIndex}"]`);
+            answeredCard.classList.add('answered');
+            answeredCard.querySelector('.checkmark').style.display = 'block';
+            
+            // 清空输入框
+            document.getElementById('answer-input').value = '';
+        }
+        
+        // 保存思维导图为图片
+        function saveAsImage() {
+            const mindmapElement = document.getElementById('mindmap');
+            
+            // 临时显示加载状态
+            const saveBtn = document.getElementById('save-btn');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '正在保存...';
+            saveBtn.disabled = true;
+            
+            html2canvas(mindmapElement, {
+                backgroundColor: '#f9fdff',
+                scale: 2 // 提高分辨率
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '月球思维导图.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                
+                // 恢复按钮状态
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            });
+        }
+        
+        // 事件监听
+        document.addEventListener('DOMContentLoaded', function() {
+            initQuestionCards();
+            initMindmap();
+            
+            // 文字提交按钮
+            document.getElementById('text-submit-btn').addEventListener('click', function() {
+                const answer = document.getElementById('answer-input').value.trim();
+                if (answer && currentQuestionIndex !== null) {
+                    saveAnswer(answer);
+                }
+            });
+            
+            // 文字输入框回车提交
+            document.getElementById('answer-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const answer = this.value.trim();
+                    if (answer && currentQuestionIndex !== null) {
+                        saveAnswer(answer);
+                    }
+                }
+            });
+            
+            // 生成思维导图
+            document.getElementById('generate-btn').addEventListener('click', function() {
+                updateMindmap();
+                
+                // 添加一些动画效果
+                const mindmapDiv = document.getElementById('mindmap');
+                mindmapDiv.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    mindmapDiv.style.transform = 'scale(1)';
+                }, 300);
+            });
+            
+            // 保存图片
+            document.getElementById('save-btn').addEventListener('click', saveAsImage);
+        });
+    </script>
+</body>
+</html>
